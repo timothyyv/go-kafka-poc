@@ -5,6 +5,7 @@ import (
 	"github.com/hyperjumptech/grule-rule-engine/builder"
 	"github.com/hyperjumptech/grule-rule-engine/engine"
 	"github.com/hyperjumptech/grule-rule-engine/pkg"
+	"grule-demo/operations"
 	// "os"
 	// "io/ioutil"
 	// "fmt"
@@ -63,7 +64,7 @@ func buildRuleEngine() {
 	// }
 	// underlying := pkg.NewReaderResource(f)
 	// resource := pkg.NewJSONResourceFromResource(underlying)
-	err := ruleBuilder.BuildRuleFromResource("Rules", "0.0.1", resource)
+	err := ruleBuilder.BuildRuleFromResource("Rules", "0.0.2", resource)
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +75,7 @@ func buildRuleEngine() {
 // add all request objects and action properties in to the working memory
 func (svc *RuleEngineSvc) Execute(ruleConf RuleConfig) error {
 	// get rule version to execute
-	knowledgeBase := knowledgeLibrary.NewKnowledgeBaseInstance("Rules", "0.0.1")
+	knowledgeBase := knowledgeLibrary.NewKnowledgeBaseInstance("Rules", "0.0.2")
 
 	// Defining the data attributes on which the rules will evaluate
 	dataCtx := ast.NewDataContext()
@@ -86,6 +87,11 @@ func (svc *RuleEngineSvc) Execute(ruleConf RuleConfig) error {
 	}
 
 	err = dataCtx.Add(ruleConf.RuleOutput().DataKey(), ruleConf.RuleOutput())
+	if err != nil {
+		return err
+	}
+
+	err = dataCtx.Add("CF", &operations.CustomFunction{})
 	if err != nil {
 		return err
 	}
