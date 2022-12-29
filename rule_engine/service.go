@@ -4,9 +4,6 @@ import (
 	"github.com/hyperjumptech/grule-rule-engine/ast"
 	"github.com/hyperjumptech/grule-rule-engine/engine"
 	"grule-demo/operations"
-	// "os"
-	// "io/ioutil"
-	// "fmt"
 )
 
 var knowledgeLibrary = *ast.NewKnowledgeLibrary()
