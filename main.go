@@ -2,107 +2,93 @@ package main
 
 import (
 	"fmt"
+	"context"
+	"encoding/json"
+	"grule-demo/kafka"
 	"grule-demo/rule_engine"
-	"github.com/go-faker/faker/v4"
+	kafkago "github.com/segmentio/kafka-go"
 	"github.com/hyperjumptech/grule-rule-engine/logger"
 )
 
-type User struct {
-	TransactionDate		string	`json:"transactionDate"`
-    SettledAt			string	`json:"settledAt"`
-    Amount				float64 `json:"amount"`
-    Category 			string	`json:"category"`
-    Currency			string	`json:"currency"`
-    Description			string	`json:"description"`
-    NameOfActor			string	`json:"nameOfActor"`
-    Status				string	`json:"status"`
-    CreatedAt			string	`json:"createdAt"`
-}
-
-type OfferService interface {
-	CheckOfferForUser(user User) bool
-}
-
-type OfferServiceClient struct {
+type AlertServiceClient struct {
 	ruleEngineSvc *rule_engine.RuleEngineSvc
 }
 
-func NewOfferService(ruleEngineSvc *rule_engine.RuleEngineSvc) *OfferServiceClient {
-	return &OfferServiceClient{
+func NewAlertServiceClient(ruleEngineSvc *rule_engine.RuleEngineSvc) *AlertServiceClient {
+	return &AlertServiceClient{
 		ruleEngineSvc: ruleEngineSvc,
 	}
 }
 
-type dataOut struct {
-	isApplicable bool
-	msg string
-}
+func (svc AlertServiceClient) checkTransaction(t rule_engine.EnrichedTransactionInput) string {
+	// CREATE CONTEXT TO STORE FACTS
+	ctx := rule_engine.NewCustomContext()
 
-func (svc OfferServiceClient) CheckOfferForUser(user User) dataOut {
-	// create a new datacontext instance to be used during this cycle
-	// this is essential to set the FACTs and actions required during the rule execution
-	offerCard := rule_engine.NewUserOfferContext()
-
-	// store the request data in the working memory of the engine
-	offerCard.UserOfferInput = &rule_engine.UserOfferInput{
-		TransactionDate:	user.TransactionDate,
-		SettledAt:			user.SettledAt,
-		Amount:				user.Amount,
-		Category:			user.Category,
-		Currency:			user.Currency,
-		Description:		user.Description,
-		NameOfActor:		user.NameOfActor,
-		Status:				user.Status,
-		CreatedAt:			user.CreatedAt,
+	// map request data to FACT attributes
+	ctx.EnrichedTransactionInput = &rule_engine.EnrichedTransactionInput{
+		Actor:							t.Actor,
+		Status: 						t.Status,
+		Currency: 						t.Currency,
+		Channel: 						t.Channel,
+		AccountNumber:					t.AccountNumber,
+		Category:						t.Category,
+		Amount: 						t.Amount,
+		LocalAmount:					t.LocalAmount,
+		EntryDate: 						t.EntryDate,
+		Description: 					t.Description,
+		CardNumber: 					t.CardNumber,
+		ChannelLocation:				t.ChannelLocation,
+		Balance: 						t.Balance,
+		CheckNumber: 					t.CheckNumber,
+		TransactionMethod: 				t.TransactionMethod,
+		InternationalTransaction: 		t.InternationalTransaction,
+		MerchantCategoryCode: 			t.MerchantCategoryCode,
+		MerchantCountryCode: 			t.MerchantCountryCode,
+		Beneficiary:					t.Beneficiary,
+		ActorPEPMatch:					t.ActorPEPMatch,
+		ActorCrimeListMatch:			t.ActorCrimeListMatch,
+		ActorWatchListMatch:			t.ActorWatchListMatch,
+		ActorSanctionListMatch:			t.ActorSanctionListMatch,
+		BeneficiaryPEPMatch:			t.BeneficiaryPEPMatch,
+		BeneficiaryCrimeListMatch:		t.BeneficiaryCrimeListMatch,
+		BeneficiaryWatchListMatch:		t.BeneficiaryWatchListMatch,
+		BeneficiarySanctionListMatch:	t.BeneficiarySanctionListMatch,
 	}
 
-	err := svc.ruleEngineSvc.Execute(offerCard)
+	// pass the new context into the engine working memory
+	err := svc.ruleEngineSvc.Execute(ctx)
 	if err != nil {
-		logger.Log.Error("GET USER OFFER RULE ENGINE FAILED", err)
+		logger.Log.Error("CHECK TRANSACTION RULE ENGINE FAILED", err)
 	}
 
-	return dataOut{
-		offerCard.UserOfferOutput.IsOfferApplicable,
-		offerCard.UserOfferOutput.PrintStatement,
-	}
+	return ctx.AlertOutput.Tag
 }
 
 func main() {
 	// instantiate a service instance to build or fetch a rule version to be executed
-	// ruleEngineSvc := rule_engine.NewRuleEngineSvc()
+	ruleEngineSvc := rule_engine.NewRuleEngineSvc()
 
-	// // create a service client with the rule service instance
-	// // the client instance runs
-	// offerSvc := NewOfferService(ruleEngineSvc)
+	// create new service client with a rule engine instance
+	alertSvcClient := NewAlertServiceClient(ruleEngineSvc)
 
-	// userA := User{
-	// 	Name:              "Mohit Khare",
-	// 	Username:          "mkfeuhrer",
-	// 	Email:             "me@mohitkhare.com",
-	// 	Gender:            "Male",
-	// 	Age:               45,
-	// 	TotalOrders:       50,
-	// 	AverageOrderValue: 225,
-	// }
+	reader := kafka.NewKafkaReader("enriched_transaction_request")
+	ctx := context.Background()
+	transData := make(chan kafkago.Message, 1000)
 
-	// fmt.Println("offer validity for user A: ", offerSvc.CheckOfferForUser(userA))
+	go reader.FetchMessages(ctx, transData)
+	go reader.CommitMessages(ctx, transData)
 
-	// userB := User{
-	// 	Name:              "Pranjal Sharma",
-	// 	Username:          "pj",
-	// 	Email:             "pj@abc.com",
-	// 	Gender:            "Male",
-	// 	Age:               25,
-	// 	TotalOrders:       10,
-	// 	AverageOrderValue: 80,
-	// }
+	data := <- transData
 
-	// fmt.Println("offer validity for user B: ", offerSvc.CheckOfferForUser(userB))
-	// fmt.Println("Hello")
-	a := rule_engine.TransactionInput{}
-	err := faker.FakeData(&a)
+	// generate request data object to execute rule against
+	request := rule_engine.EnrichedTransactionInput{}
+	err := json.Unmarshal([]byte(string(data.Value)), &request)
+
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err.Error()) 
+		//json: Unmarshal(non-pointer main.Request)
 	}
-	fmt.Printf("%+v", a)
+
+	fmt.Println("check transaction for issues: ", alertSvcClient.checkTransaction(request))
+	fmt.Println("Hello")
 }

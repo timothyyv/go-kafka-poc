@@ -2,9 +2,7 @@ package rule_engine
 
 import (
 	"github.com/hyperjumptech/grule-rule-engine/ast"
-	"github.com/hyperjumptech/grule-rule-engine/builder"
 	"github.com/hyperjumptech/grule-rule-engine/engine"
-	"github.com/hyperjumptech/grule-rule-engine/pkg"
 	"grule-demo/operations"
 	// "os"
 	// "io/ioutil"
@@ -36,46 +34,18 @@ type RuleEngineSvc struct {
 // create a new rule engine instance
 func NewRuleEngineSvc() *RuleEngineSvc {
 	// external call to fetch current rule version can be added here
-	buildRuleEngine()
+	// buildRuleEngine()
 	return &RuleEngineSvc{}
 }
 
 // build a rule version from a rules file|db|string
-func buildRuleEngine() {
-	ruleBuilder := builder.NewRuleBuilder(&knowledgeLibrary)
-	// jsonData, err := ioutil.ReadFile("rules.json")
-	// fmt.Println("Here", jsonData)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// ruleset, err := pkg.ParseJSONRuleset(jsonData)
-	
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("Parsed ruleset: ")
-	// fmt.Println("Hello", ruleset)
-	
 
-	resource := pkg.NewFileResource("rules.grl")
-	// f, err := os.Open("rules.json")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// underlying := pkg.NewReaderResource(f)
-	// resource := pkg.NewJSONResourceFromResource(underlying)
-	err := ruleBuilder.BuildRuleFromResource("Rules", "0.0.2", resource)
-	if err != nil {
-		panic(err)
-	}
-
-}
 
 // fetch rules version from application memory
 // add all request objects and action properties in to the working memory
 func (svc *RuleEngineSvc) Execute(ruleConf RuleConfig) error {
 	// get rule version to execute
-	knowledgeBase := knowledgeLibrary.NewKnowledgeBaseInstance("Rules", "0.0.2")
+	knowledgeBase := knowledgeLibrary.NewKnowledgeBaseInstance("Rules", "0.0.1")
 
 	// Defining the data attributes on which the rules will evaluate
 	dataCtx := ast.NewDataContext()
