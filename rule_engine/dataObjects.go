@@ -100,7 +100,7 @@ type AlertOutput struct {
 
 // string representation of Input Fact
 func (u *EnrichedTransactionInput) DataKey() string {
-	return "Transaction"
+	return "InputData"
 }
 
 // string representation of Output Fact
