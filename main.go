@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"grule-demo/kafka"
 	"grule-demo/rule_engine"
-	kafkago "github.com/segmentio/kafka-go"
 	"github.com/hyperjumptech/grule-rule-engine/logger"
+	kafkago "github.com/segmentio/kafka-go"
 )
 
 type AlertServiceClient struct {
@@ -68,27 +68,40 @@ func main() {
 	// instantiate a service instance to build or fetch a rule version to be executed
 	ruleEngineSvc := rule_engine.NewRuleEngineSvc()
 
-	// create new service client with a rule engine instance
+	// // create new service client with a rule engine instance
 	alertSvcClient := NewAlertServiceClient(ruleEngineSvc)
 
-	reader := kafka.NewKafkaReader("enriched_transaction_request")
+	topics := []string{"enriched_transaction_request", "rule-topic"}
+
+	reader := kafka.NewKafkaReader(topics)
 	ctx := context.Background()
 	transData := make(chan kafkago.Message, 1000)
 
 	go reader.FetchMessages(ctx, transData)
-	go reader.CommitMessages(ctx, transData)
-
 	data := <- transData
+	fmt.Printf("received data from topic %v: %v", string(data.Topic), string(data.Value))
 
-	// generate request data object to execute rule against
-	request := rule_engine.EnrichedTransactionInput{}
-	err := json.Unmarshal([]byte(string(data.Value)), &request)
-
-	if err != nil {
-		fmt.Println(err.Error()) 
-		//json: Unmarshal(non-pointer main.Request)
+	if string(data.Topic) == "rule-topic" {
+		err := rule_engine.NewRuleBuilder(data.Value)
+		if err != nil {
+			logger.Log.Fatal("Unable to build", err)
+		}
 	}
 
-	fmt.Println("check transaction for issues: ", alertSvcClient.checkTransaction(request))
-	fmt.Println("Hello")
+	if string(data.Topic) == "enriched_transaction_request" {
+
+	// generate request data object to execute rule against
+		request := rule_engine.EnrichedTransactionInput{}
+		err := json.Unmarshal([]byte(string(data.Value)), &request)
+	
+		if err != nil {
+			fmt.Println(err.Error()) 
+			//json: Unmarshal(non-pointer main.Request)
+		}
+
+		fmt.Println("check transaction for issues: ", alertSvcClient.checkTransaction(request))
+	}
+
+	// fmt.Println("Hello")
+	reader.CommitMessages(ctx, transData)
 }

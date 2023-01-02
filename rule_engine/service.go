@@ -1,9 +1,9 @@
 package rule_engine
 
 import (
+	"grule-demo/operations"
 	"github.com/hyperjumptech/grule-rule-engine/ast"
 	"github.com/hyperjumptech/grule-rule-engine/engine"
-	"grule-demo/operations"
 )
 
 var knowledgeLibrary = *ast.NewKnowledgeLibrary()
@@ -24,8 +24,7 @@ type RuleConfig interface {
 	RuleOutput() RuleOutput
 }
 
-type RuleEngineSvc struct {
-}
+type RuleEngineSvc struct {}
 
 
 // create a new rule engine instance
@@ -35,14 +34,12 @@ func NewRuleEngineSvc() *RuleEngineSvc {
 	return &RuleEngineSvc{}
 }
 
-// build a rule version from a rules file|db|string
-
 
 // fetch rules version from application memory
 // add all request objects and action properties in to the working memory
 func (svc *RuleEngineSvc) Execute(ruleConf RuleConfig) error {
 	// get rule version to execute
-	knowledgeBase := knowledgeLibrary.NewKnowledgeBaseInstance("Rules", "0.0.1")
+	knowledgeBase := *knowledgeLibrary.NewKnowledgeBaseInstance("Rules", "0.0.1")
 
 	// Defining the data attributes on which the rules will evaluate
 	dataCtx := ast.NewDataContext()
@@ -66,7 +63,7 @@ func (svc *RuleEngineSvc) Execute(ruleConf RuleConfig) error {
 	ruleEngine := engine.NewGruleEngine()
 
 	// pass FACT and rule version into the rule engine exection flow
-	err = ruleEngine.Execute(dataCtx, knowledgeBase)
+	err = ruleEngine.Execute(dataCtx, &knowledgeBase)
 	if err != nil {
 		return err
 	}

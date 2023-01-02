@@ -1,0 +1,14 @@
+syntax = "proto3";
+option go_package = "grule-demo/grpc/client";
+package aggregation;
+
+service Aggregation {
+  rpc SendAggregation (AggregationRequest) returns (AggregationResponse) {}
+}
+message AggregationRequest {
+  string input = 1;
+}
+
+message AggregationResponse {
+  float value = 1;
+}

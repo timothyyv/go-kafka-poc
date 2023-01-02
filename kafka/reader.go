@@ -13,16 +13,18 @@ type Reader struct {
 	Reader *kafka.Reader
 }
 
-func NewKafkaReader(topic string) *Reader {
+func NewKafkaReader(topics []string) *Reader {
 	l := log.New(os.Stdout, "kafka reader: ", 0)
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{brokerAddress},
-		Topic:   topic,
+		// Topic:   topic,
 		GroupID: "group-key",
+		GroupTopics: topics,
 		// assign the logger to the reader
 		MinBytes:  10e3, // 10KB
 		MaxBytes:  10e6, // 10MB
+		StartOffset: kafka.LastOffset,
 		Logger: l,
 	})
 
