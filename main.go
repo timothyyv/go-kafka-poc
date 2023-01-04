@@ -64,6 +64,12 @@ func (svc AlertServiceClient) checkTransaction(t rule_engine.EnrichedTransaction
 	return ctx.AlertOutput.Tag
 }
 
+type EnrichedData struct {
+	Workflow	string									`json:"workflow"`
+	Version		uint8									`json:"version"`
+	Data		rule_engine.EnrichedTransactionInput	`json:"data"`
+}
+
 func main() {
 	// instantiate a service instance to build or fetch a rule version to be executed
 	ruleEngineSvc := rule_engine.NewRuleEngineSvc()
@@ -91,7 +97,7 @@ func main() {
 	if string(data.Topic) == "enriched_transaction_request" {
 
 	// generate request data object to execute rule against
-		request := rule_engine.EnrichedTransactionInput{}
+		request := EnrichedData{}
 		err := json.Unmarshal([]byte(string(data.Value)), &request)
 	
 		if err != nil {
@@ -99,7 +105,7 @@ func main() {
 			//json: Unmarshal(non-pointer main.Request)
 		}
 
-		fmt.Println("check transaction for issues: ", alertSvcClient.checkTransaction(request))
+		fmt.Println("check transaction for issues: ", alertSvcClient.checkTransaction(request.Data))
 	}
 
 	// fmt.Println("Hello")
