@@ -23,7 +23,7 @@ func NewRuleBuilder(data []byte) error {
 	request := KafkaData{}
 	json.Unmarshal(data, &request)
 
-	err := BuildRuleEngine(request)
+	err := createGRLFile(request)
 	if err != nil {
 		log.Fatal(err)
 		return err

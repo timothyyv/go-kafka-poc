@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"context"
 	"encoding/json"
 	"grule-demo/kafka"
@@ -20,54 +21,62 @@ func NewAlertServiceClient(ruleEngineSvc *rule_engine.RuleEngineSvc) *AlertServi
 	}
 }
 
-func (svc AlertServiceClient) checkTransaction(t rule_engine.EnrichedTransactionInput) string {
+type EnrichedData struct {
+	Workflow	string									`json:"workflow"`
+	Version		uint8									`json:"version"`
+	Data		rule_engine.EnrichedTransactionInput	`json:"data"`
+}
+
+func (svc AlertServiceClient) checkTransaction(t EnrichedData) string {
+	version := strconv.Itoa(int(t.Version))
+
+	// build rule from resource based on version adn workflow name
+	rule_engine.BuildRuleEngine(t.Workflow, version)
+
 	// CREATE CONTEXT TO STORE FACTS
 	ctx := rule_engine.NewCustomContext()
+	// fmt.Printf("SENT DATA %v\n", t)
 
 	// map request data to FACT attributes
 	ctx.EnrichedTransactionInput = &rule_engine.EnrichedTransactionInput{
-		Actor:							t.Actor,
-		Status: 						t.Status,
-		Currency: 						t.Currency,
-		Channel: 						t.Channel,
-		AccountNumber:					t.AccountNumber,
-		Category:						t.Category,
-		Amount: 						t.Amount,
-		LocalAmount:					t.LocalAmount,
-		EntryDate: 						t.EntryDate,
-		Description: 					t.Description,
-		CardNumber: 					t.CardNumber,
-		ChannelLocation:				t.ChannelLocation,
-		Balance: 						t.Balance,
-		CheckNumber: 					t.CheckNumber,
-		TransactionMethod: 				t.TransactionMethod,
-		InternationalTransaction: 		t.InternationalTransaction,
-		MerchantCategoryCode: 			t.MerchantCategoryCode,
-		MerchantCountryCode: 			t.MerchantCountryCode,
-		Beneficiary:					t.Beneficiary,
-		ActorPEPMatch:					t.ActorPEPMatch,
-		ActorCrimeListMatch:			t.ActorCrimeListMatch,
-		ActorWatchListMatch:			t.ActorWatchListMatch,
-		ActorSanctionListMatch:			t.ActorSanctionListMatch,
-		BeneficiaryPEPMatch:			t.BeneficiaryPEPMatch,
-		BeneficiaryCrimeListMatch:		t.BeneficiaryCrimeListMatch,
-		BeneficiaryWatchListMatch:		t.BeneficiaryWatchListMatch,
-		BeneficiarySanctionListMatch:	t.BeneficiarySanctionListMatch,
+		Id:								t.Data.Id,
+		Actor:							t.Data.Actor,
+		Status: 						t.Data.Status,
+		Currency: 						t.Data.Currency,
+		Channel: 						t.Data.Channel,
+		AccountNumber:					t.Data.AccountNumber,
+		Category:						t.Data.Category,
+		Amount: 						t.Data.Amount,
+		LocalAmount:					t.Data.LocalAmount,
+		EntryDate: 						t.Data.EntryDate,
+		Description: 					t.Data.Description,
+		CardNumber: 					t.Data.CardNumber,
+		ChannelLocation:				t.Data.ChannelLocation,
+		Balance: 						t.Data.Balance,
+		CheckNumber: 					t.Data.CheckNumber,
+		TransactionMethod: 				t.Data.TransactionMethod,
+		InternationalTransaction: 		t.Data.InternationalTransaction,
+		MerchantCategoryCode: 			t.Data.MerchantCategoryCode,
+		MerchantCountryCode: 			t.Data.MerchantCountryCode,
+		Beneficiary:					t.Data.Beneficiary,
+		ActorPEPMatch:					t.Data.ActorPEPMatch,
+		ActorCrimeListMatch:			t.Data.ActorCrimeListMatch,
+		ActorWatchListMatch:			t.Data.ActorWatchListMatch,
+		ActorSanctionListMatch:			t.Data.ActorSanctionListMatch,
+		BeneficiaryPEPMatch:			t.Data.BeneficiaryPEPMatch,
+		BeneficiaryCrimeListMatch:		t.Data.BeneficiaryCrimeListMatch,
+		BeneficiaryWatchListMatch:		t.Data.BeneficiaryWatchListMatch,
+		BeneficiarySanctionListMatch:	t.Data.BeneficiarySanctionListMatch,
+		CreatedAt: 						t.Data.CreatedAt,
 	}
 
 	// pass the new context into the engine working memory
-	err := svc.ruleEngineSvc.Execute(ctx)
+	err := svc.ruleEngineSvc.Execute(ctx, t.Workflow, version)
 	if err != nil {
 		logger.Log.Error("CHECK TRANSACTION RULE ENGINE FAILED", err)
 	}
 
 	return ctx.AlertOutput.Tag
-}
-
-type EnrichedData struct {
-	Workflow	string									`json:"workflow"`
-	Version		uint8									`json:"version"`
-	Data		rule_engine.EnrichedTransactionInput	`json:"data"`
 }
 
 func main() {
@@ -85,7 +94,6 @@ func main() {
 
 	go reader.FetchMessages(ctx, transData)
 	data := <- transData
-	fmt.Printf("received data from topic %v: %v", string(data.Topic), string(data.Value))
 
 	if string(data.Topic) == "rule-topic" {
 		err := rule_engine.NewRuleBuilder(data.Value)
@@ -96,16 +104,17 @@ func main() {
 
 	if string(data.Topic) == "enriched_transaction_request" {
 
-	// generate request data object to execute rule against
+		// generate request data object to execute rule against
 		request := EnrichedData{}
 		err := json.Unmarshal([]byte(string(data.Value)), &request)
+		// fmt.Printf("NEW REQUEST %v\n", request.Data.Actor.Emails)
 	
 		if err != nil {
 			fmt.Println(err.Error()) 
 			//json: Unmarshal(non-pointer main.Request)
 		}
 
-		fmt.Println("check transaction for issues: ", alertSvcClient.checkTransaction(request.Data))
+		fmt.Println("check transaction for issues: ", alertSvcClient.checkTransaction(request))
 	}
 
 	// fmt.Println("Hello")

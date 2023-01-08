@@ -41,6 +41,9 @@ func (cf *CustomFunction) Aggregation(input string) float64 {
     //     fmt.Printf("%d of type %T", y, y)
     // }
 	fmt.Printf("Response from GRPC: %v", res.Value)
+	if res.Value <= 0 {
+		return 9999999999999.999
+	}
 	return float64(res.Value)
 }
 

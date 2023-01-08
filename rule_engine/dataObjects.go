@@ -36,17 +36,20 @@ type GovernmentIds struct {
 }
 
 type Actor struct {
+	Id 				string			`json:"id"`
 	ActorType 		string			`json:"actorType"`
-	Phones			[]PhoneNumber	`json:"phoneNumber"`
+	AccountNumber	string			`json:"accountNumber"`
+	Phones			[]PhoneNumber	`json:"phones"`
     FirstName		string			`json:"firstName"`
     LastName		string			`json:"lastName"`
-    Emails			[]EmailAddress	`json:"emailAddress"`
-    Addresses		[]Address		`json:"address"`
-    GovernmentIds	[]GovernmentIds	`json:"governmentIds"`
+    Emails			[]EmailAddress	`json:"emails"`
+    Address			[]Address		`json:"address"`
+    GovernmentId	[]GovernmentIds	`json:"governmentId"`
 	Status			string			`json:"status"`
 	Domicile		string			`json:"domicile"`
 	Gender			string			`json:"gender"`
-	LegalEntity		[]LegalEntity	`json:"legalEntity"`
+	// LegalEntity		[]LegalEntity	`json:"legalEntity"`
+	CreatedAt		string			`json:"createdAt"`
 }
 
 type Beneficiary struct {
@@ -64,6 +67,7 @@ type Beneficiary struct {
 
 // input data object from kafka topic
 type EnrichedTransactionInput struct {
+	Id 								string		`json:"id"`
 	Actor							Actor		`json:"actor"`
 	Status 							string		`json:"status"`
 	Currency 						string		`json:"currency"`
@@ -91,6 +95,7 @@ type EnrichedTransactionInput struct {
 	BeneficiaryCrimeListMatch		bool		`json:"beneficiary_crime_list_match"`
 	BeneficiaryWatchListMatch		bool		`json:"beneficiary_watch_list_match"`
 	BeneficiarySanctionListMatch	bool		`json:"beneficiary_sanction_list_match"`
+	CreatedAt						string		`json:"createdAt"`
 }
 
 // rule output action object

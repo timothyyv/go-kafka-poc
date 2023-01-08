@@ -12,15 +12,13 @@ import (
 
 // build and add new ruleset to rule engine working memory
 // build a rule version from a rules file|db|string
-func BuildRuleEngine(jsonData KafkaData) error {
-	ruleBuilder := builder.NewRuleBuilder(&knowledgeLibrary)
+func createGRLFile(jsonData KafkaData) error {
 	ruleset, err := pkg.ParseJSONRuleset(jsonData.Data)
 	if err != nil {
 		panic(err)
 	}
 	// fmt.Printf("New ruleset: %v\n", strconv.Itoa(int(jsonData.Version)))
 
-	bs := pkg.NewBytesResource([]byte(ruleset))
 	wd, _ := os.Getwd()
 
 	if _, err := os.Stat(wd + "/workflows/" + jsonData.Workflow); os.IsNotExist(err) {
@@ -36,8 +34,16 @@ func BuildRuleEngine(jsonData KafkaData) error {
         log.Fatal(err)
     }
 
-	
-	err = ruleBuilder.BuildRuleFromResource(jsonData.Workflow, strconv.Itoa(int(jsonData.Version)), bs)
+	return nil
+}
+
+func BuildRuleEngine(workflow string, version string) error {
+	wd, _ := os.Getwd()
+	file := wd + "/workflows/" + workflow + "/v" + version + ".grl"
+	resource := pkg.NewFileResource(file)
+
+	ruleBuilder := builder.NewRuleBuilder(&knowledgeLibrary)
+	err := ruleBuilder.BuildRuleFromResource(workflow, version, resource)
 	if err != nil {
 		log.Fatal(err)
 		return err
